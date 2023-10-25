@@ -1,3 +1,3 @@
 # machineLearningTest
 
-Busy with other projects. Empty for now
+Ill be updating this repo with new things all the new Machine Learning topics that I go through and notes that I make. Like my own personal ML Archive
