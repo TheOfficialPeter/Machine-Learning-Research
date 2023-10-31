@@ -3,6 +3,10 @@ import cv2
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import pickle
+import win32gui
+import win32ui
+import win32con
+import dxcam
 
 def abs_sobel_thresh(img, orient='x', thresh_min=20, thresh_max=100):
 	"""
@@ -108,11 +112,15 @@ def perspective_transform(img):
 	"""
 	img_size = (img.shape[1], img.shape[0])
 
-	src = np.float32(
+	""" src = np.float32(
 		[[600, 300],
 		[460, 340],
 		[770, 300],
-		[930, 340]])
+		[930, 340]]) """
+	src = np.float32(
+		[[424, 231], [603, 231], [285, 330], [943, 330]]
+		#[[377, 254], [590, 254], [225, 347], [810, 356]]
+		)
 	dst = np.float32(
 		[[300, 720],
 		[980, 720],
@@ -124,7 +132,7 @@ def perspective_transform(img):
 
 	warped = cv2.warpPerspective(img, m, img_size, flags=cv2.INTER_LINEAR)
 	unwarped = cv2.warpPerspective(warped, m_inv, (warped.shape[1], warped.shape[0]), flags=cv2.INTER_LINEAR)  # DEBUG
-	warped = cv2.rotate(warped, cv2.ROTATE_90_CLOCKWISE)
+	#warped = cv2.rotate(warped, cv2.ROTATE_90_CLOCKWISE)
 
 	return warped, unwarped, m, m_inv
 
@@ -258,7 +266,7 @@ def tune_fit(binary_warped, left_fit, right_fit):
 	return ret
 
 
-def viz1(binary_warped, ret):
+def viz1(binary_warped, img, ret):
 	"""
 	Visualize each sliding window location and predicted lane lines, on binary warped image
 	save_file is a string representing where to save the image (if None, then just display)
@@ -279,11 +287,13 @@ def viz1(binary_warped, ret):
 
 	out_img[nonzeroy[left_lane_inds], nonzerox[left_lane_inds]] = [255, 0, 0]
 	out_img[nonzeroy[right_lane_inds], nonzerox[right_lane_inds]] = [0, 0, 255]
-	plt.imshow(out_img)
+	""" plt.imshow(out_img)
 	plt.plot(left_fitx, ploty, color='yellow')
 	plt.plot(right_fitx, ploty, color='yellow')
 	plt.xlim(0, 1280)
-	plt.ylim(720, 0)
+	plt.ylim(720, 0) """
+
+	return out_img
 
 
 def viz2(binary_warped, img, ret):
@@ -371,10 +381,6 @@ def calc_vehicle_offset(undist, left_fit, right_fit):
 	bottom_x_right = right_fit[0]*(bottom_y**2) + right_fit[1]*bottom_y + right_fit[2]
 	vehicle_offset = undist.shape[1]/2 - (bottom_x_left + bottom_x_right)/2
 
-	# Convert pixel offset to meters
-	xm_per_pix = 3.7/700 # meters per pixel in x dimension
-	vehicle_offset *= xm_per_pix
-
 	return vehicle_offset
 
 
@@ -418,7 +424,9 @@ def final_viz(undist, left_fit, right_fit, m_inv, left_curve, right_curve, vehic
 
 
 if __name__ == '__main__':
-	img_file = '1.png'
+	window_name = "Your Window Title"
+	hwnd = win32gui.FindWindow(None, window_name)
+	img_file = '6.png'
 
 	with open('calibrate_camera.p', 'rb') as f:
 		save_dict = pickle.load(f)
@@ -442,37 +450,24 @@ if __name__ == '__main__':
 	nonzeroy = ret['nonzeroy']
 	nonzerox = ret['nonzerox']
 
-	result = viz2(warped, img, ret)
-	result = cv2.rotate(result, cv2.ROTATE_90_COUNTERCLOCKWISE)
+	result = viz1(warped, img, ret)
+	#result = cv2.rotate(result, cv2.ROTATE_90_COUNTERCLOCKWISE)
 	newwarp = cv2.warpPerspective(result, m_inv, (undist.shape[1], undist.shape[0]))
 
 	newwarp_copy = np.zeros(img.shape[:2] + (4,), dtype=np.uint8)
 	newwarp_copy[..., :3] = newwarp
 	newwarp_copy[..., 3] = 255
 
-	print(newwarp_copy.shape)
-	print(img.shape)
+	#print(newwarp_copy.shape)
+	#print(img.shape)
 
-	plt.imshow(newwarp_copy)
-	plt.figure()
-	plt.imshow(img)
-	plt.show()
-
-	newwarp = cv2.addWeighted(img, 0.5, newwarp_copy, 0.3, 0, dtype=cv2.CV_32F)
-	plt.imshow(newwarp)
-	plt.show()
-	exit()
-
+	newwarp = cv2.addWeighted(img, 1, newwarp_copy, 0.1, 0.1, dtype=cv2.CV_32F)
 	#left_curve, right_curve = calc_curve(left_lane_inds, right_lane_inds, nonzerox, nonzeroy)
 
-	#v_offset = calc_vehicle_offset(undist, left_fit, right_fit)
+	v_offset = calc_vehicle_offset(undist, left_fit, right_fit)
 
 	#final = final_viz(undist, left_fit, right_fit, m_inv, left_curve, right_curve, v_offset)
 
-	plt.figure()
-	plt.imshow(newwarp, vmin=0, vmax=1)
-	plt.figure()
-	plt.imshow(img)
-	plt.figure()
-	plt.imshow(unwarped, cmap='gray', vmin=0, vmax=1)
+	plt.title(v_offset)
+	plt.imshow(newwarp)
 	plt.show()
