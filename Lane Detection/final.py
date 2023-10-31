@@ -7,6 +7,7 @@ import win32gui
 import win32ui
 import win32con
 import dxcam
+import mss 
 
 def abs_sobel_thresh(img, orient='x', thresh_min=20, thresh_max=100):
 	"""
@@ -118,7 +119,7 @@ def perspective_transform(img):
 		[770, 300],
 		[930, 340]]) """
 	src = np.float32(
-		[[424, 231], [603, 231], [285, 330], [943, 330]]
+		[[508, 350], [633, 348], [413, 420], [772, 407]]
 		#[[377, 254], [590, 254], [225, 347], [810, 356]]
 		)
 	dst = np.float32(
@@ -334,7 +335,7 @@ def viz2(binary_warped, img, ret):
 	# Draw the lane onto the warped blank image
 	cv2.fillPoly(window_img, np.int_([left_line_pts]), (0,255, 0))
 	cv2.fillPoly(window_img, np.int_([right_line_pts]), (0,255, 0))
-	result = cv2.addWeighted(out_img, 1, window_img, 0.3, 0)
+	result = cv2.addWeighted(out_img, 1, window_img, 0.5, 0)
 
 	""" plt.imshow(result)
 	plt.plot(left_fitx, ploty, color='yellow')
@@ -423,18 +424,35 @@ def final_viz(undist, left_fit, right_fit, m_inv, left_curve, right_curve, vehic
 	return result
 
 
-if __name__ == '__main__':
-	window_name = "Your Window Title"
-	hwnd = win32gui.FindWindow(None, window_name)
-	img_file = '6.png'
+window_name = "Roblox"
+hwnd = win32gui.FindWindow(None, window_name)
+win32gui.SetForegroundWindow(hwnd)
 
-	with open('calibrate_camera.p', 'rb') as f:
-		save_dict = pickle.load(f)
+sct = mss.mss()
+
+with open('calibrate_camera.p', 'rb') as f:
+	save_dict = pickle.load(f)
 	
-	mtx = save_dict['mtx']
-	dist = save_dict['dist']
+mtx = save_dict['mtx']
+dist = save_dict['dist']
 
-	img = mpimg.imread(img_file)
+while True:
+	left, top, right, bottom = win32gui.GetWindowRect(hwnd)
+	width = right - left
+	height = bottom - top
+
+	""" camera = dxcam.create()
+	img = camera.grab(region=(left, top, right, bottom))
+	bgr_frame = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+	alpha_channel = np.ones((height, width, 1), dtype=np.uint8) * 255
+	img = np.concatenate((bgr_frame, alpha_channel), axis=-1) """
+
+	img = np.array(sct.grab({"top": top, "left": left, "width": width, "height": height}))
+	img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGBA)
+
+	#img_file = '6.png'
+
+	#img = mpimg.imread(img_file)
 
 	undist = cv2.undistort(img, mtx, dist, None, mtx)
 
@@ -450,7 +468,8 @@ if __name__ == '__main__':
 	nonzeroy = ret['nonzeroy']
 	nonzerox = ret['nonzerox']
 
-	result = viz1(warped, img, ret)
+	result = viz2(warped, img, ret)
+	
 	#result = cv2.rotate(result, cv2.ROTATE_90_COUNTERCLOCKWISE)
 	newwarp = cv2.warpPerspective(result, m_inv, (undist.shape[1], undist.shape[0]))
 
@@ -460,14 +479,22 @@ if __name__ == '__main__':
 
 	#print(newwarp_copy.shape)
 	#print(img.shape)
-
-	newwarp = cv2.addWeighted(img, 1, newwarp_copy, 0.1, 0.1, dtype=cv2.CV_32F)
+	img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGBA)
+	newwarp = cv2.addWeighted(img, 1, newwarp_copy, 0.5, 0.1, dtype=cv2.CV_8U)
+	#newwarp = cv2.addWeighted(img, 1, newwarp_copy, 0.5, 0.1, dtype=cv2.CV_32F)
 	#left_curve, right_curve = calc_curve(left_lane_inds, right_lane_inds, nonzerox, nonzeroy)
 
 	v_offset = calc_vehicle_offset(undist, left_fit, right_fit)
 
 	#final = final_viz(undist, left_fit, right_fit, m_inv, left_curve, right_curve, v_offset)
 
+	cv2.imshow('final', newwarp)
+
+	if cv2.waitKey(10) == ord('q'):
+		break
+
+	""" plt.imshow(newwarp_copy)
+	plt.figure()
 	plt.title(v_offset)
 	plt.imshow(newwarp)
-	plt.show()
+	plt.show() """
