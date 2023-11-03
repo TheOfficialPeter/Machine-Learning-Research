@@ -7,6 +7,7 @@ This is my personal repository for all of my machine learning studies. I will up
 **What am I currently learning**:question:
 
 - *Lane detection using OpenCV*
+- *Using Basic Regression techniques to analyze trends*
 
 **Papers I am currently reading**:memo:
 
