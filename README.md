@@ -1,6 +1,5 @@
-# machineLearningTest
+# Machine Learning Research
 
-Ill be updating this repo with all the new Machine Learning topics that I go through and notes that I make. Like my own personal ML Archive
+**What is this repo about**:question:
 
-First Project:
-Basic Lane Detection and Driving Assist
+This is my personal repository for all of my machine learning studies. I will upload documentation to support said projects once I have made final discoveries or completed them.
